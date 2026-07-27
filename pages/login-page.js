@@ -1,0 +1,128 @@
+const { expect } = require('@playwright/test');
+const { BasePage } = require('./base-page');
+
+class LoginPage extends BasePage {
+  constructor(page) {
+    super(page);
+
+    this.elements = {
+      'hesabım menüsü': page.locator('a:has(#lnkMyAccount)'),
+      'giriş menüsü bağlantısı': page.locator('#lnkLoginNavNode'),
+      'e-posta sekmesi': page.locator('#btnLoginWithEmail'),
+      'e-posta alanı': page.locator('#txtEmail'),
+      'devam butonu': page.getByRole('button', { name: /giriş yap.*hesap oluştur/i }),
+      'şifre alanı': page.locator('#txtPassword'),
+      'giriş butonu': page.locator('#btnSubmitPassword'),
+      'çıkış bağlantısı': page.locator('#lnkSignOutNavNode'),
+      'hesap oluştur başlığı': page.getByRole('heading', { name: 'Hesap Oluştur' }),
+      'kişisel bilgiler başlığı': page
+        .locator('#account-info')
+        .getByRole('heading', { name: 'Kişisel Bilgileriniz' }),
+    };
+  }
+
+  async open() {
+    await this.openHome();
+    await expect(this.element('hesabım menüsü')).toBeVisible({ timeout: 30_000 });
+  }
+
+  async openLoginForm() {
+    await this.element('hesabım menüsü').hover();
+    await expect(this.element('giriş menüsü bağlantısı')).toBeVisible();
+    await this.element('giriş menüsü bağlantısı').press('Enter');
+    await this.element('e-posta sekmesi').click();
+  }
+
+  async login(email, password) {
+    await this.openLoginForm();
+    await this.element('e-posta alanı').fill(email);
+    await this.element('devam butonu').click({ noWaitAfter: true });
+    await expect(this.element('şifre alanı')).toBeVisible();
+    await this.element('şifre alanı').fill(password);
+    await this.element('giriş butonu').click({ noWaitAfter: true });
+  }
+
+  async attemptLogin(email, password) {
+    await this.openLoginForm();
+    const emailInput = this.element('e-posta alanı');
+    const passwordInput = this.element('şifre alanı');
+    await emailInput.fill(email);
+
+    if (!email) {
+      await emailInput.focus();
+      await emailInput.press('Tab');
+      return;
+    }
+
+    await this.element('devam butonu').click({ noWaitAfter: true });
+    await passwordInput
+      .or(this.element('hesap oluştur başlığı'))
+      .first()
+      .waitFor({ state: 'visible' });
+
+    if (!(await passwordInput.isVisible())) return;
+
+    await passwordInput.fill(password);
+    if (!password) {
+      await passwordInput.focus();
+      await passwordInput.press('Tab');
+      return;
+    }
+
+    await this.element('giriş butonu').click({ noWaitAfter: true });
+  }
+
+  async verifyMessage(message) {
+    if (message === 'Hesap Oluştur') {
+      await expect(this.element('hesap oluştur başlığı')).toBeVisible();
+      return;
+    }
+    await expect(
+      this.page.getByText(message, { exact: false }).filter({ visible: true }).first(),
+    ).toBeVisible();
+  }
+
+  async verifyLogin() {
+    await this.openAccountPage();
+    await expect(this.element('kişisel bilgiler başlığı')).toBeVisible({
+      timeout: 30_000,
+    });
+  }
+
+  async openAccountPage() {
+    await this.element('hesabım menüsü').click();
+  }
+
+  async logout() {
+    const protectedAccountUrl =
+      await this.element('hesabım menüsü').getAttribute('href');
+    if (!protectedAccountUrl || protectedAccountUrl === '/login') {
+      throw new Error('Oturum gerektiren hesap sayfasının adresi alınamadı.');
+    }
+
+    await this.element('hesabım menüsü').hover();
+    await expect(this.element('çıkış bağlantısı')).toBeVisible();
+    await this.element('çıkış bağlantısı').press('Enter');
+    await expect(this.element('giriş menüsü bağlantısı')).toBeAttached({
+      timeout: 30_000,
+    });
+
+    return protectedAccountUrl;
+  }
+
+  async verifyLogout(protectedAccountUrl) {
+    if (!protectedAccountUrl) {
+      throw new Error('Doğrulanacak korumalı hesap sayfası adresi bulunamadı.');
+    }
+
+    await this.page.goto(protectedAccountUrl);
+    await expect(this.page).toHaveURL(/\/login(?:[/?#]|$)/i, {
+      timeout: 30_000,
+    });
+
+    await expect(this.element('e-posta sekmesi')).toBeVisible();
+    await expect(this.element('çıkış bağlantısı')).toHaveCount(0);
+  }
+}
+
+module.exports = { LoginPage };

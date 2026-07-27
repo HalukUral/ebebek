@@ -1,0 +1,74 @@
+name: Smoke Tests
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smoke-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke-tests:
+    name: Playwright Cucumber Smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      BASE_URL: ${{ secrets.BASE_URL }}
+      TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+      TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+      BROWSER: chromium
+      HEADLESS: "true"
+      TRACE: "true"
+      VIDEO: "false"
+      LOCALE: tr-TR
+
+    steps:
+      - name: Kaynak kodu al
+        uses: actions/checkout@v4
+
+      - name: Node.js kur
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Java kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Bağımlılıkları yükle
+        run: npm ci
+
+      - name: Chromium ve sistem bağımlılıklarını yükle
+        run: npx playwright install --with-deps chromium
+
+      - name: Smoke testlerini çalıştır
+        run: npm run test:smoke
+
+      - name: Allure raporunu oluştur
+        if: always()
+        continue-on-error: true
+        run: npm run report:generate
+
+      - name: Allure ve test çıktılarını yükle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-artifacts-${{ github.run_number }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            allure-results/
+            allure-report/
+            test-results/

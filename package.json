@@ -1,0 +1,35 @@
+{
+  "name": "ebebek-login-automation",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "clean:results": "node -e \"require('fs').rmSync('allure-results',{recursive:true,force:true});require('fs').rmSync('allure-report',{recursive:true,force:true})\"",
+    "pretest": "npm run clean:results",
+    "pretest:login": "npm run clean:results",
+    "pretest:negative-login": "npm run clean:results",
+    "pretest:search": "npm run clean:results",
+    "pretest:cart": "npm run clean:results",
+    "pretest:logout": "npm run clean:results",
+    "pretest:smoke": "npm run clean:results",
+    "test": "cucumber-js",
+    "test:login": "cucumber-js --tags '@positive-login'",
+    "test:negative-login": "cucumber-js --tags '@negative-login'",
+    "test:search": "cucumber-js --tags '@search'",
+    "test:cart": "cucumber-js --tags '@cart'",
+    "test:logout": "cucumber-js --tags '@logout'",
+    "test:smoke": "cucumber-js --tags '@smoke'",
+    "report:generate": "allure generate allure-results --clean -o allure-report",
+    "report:open": "allure open allure-report"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@cucumber/cucumber": "^12.9.0",
+    "@playwright/test": "^1.62.0",
+    "allure-commandline": "^2.34.1",
+    "allure-cucumberjs": "^3.10.2",
+    "dotenv": "^17.2.1",
+    "playwright": "^1.62.0"
+  }
+}
