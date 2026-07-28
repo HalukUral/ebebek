@@ -38,6 +38,9 @@ class SearchPage extends BasePage {
   async search(term) {
     const searchInput = this.element('arama alanı');
     await searchInput.fill(term);
+    await this.page
+      .locator('.header__menu-search-content-suggestion')
+      .waitFor({ state: 'attached' });
     await searchInput.press('Enter');
     await this.page.waitForURL((url) => url.pathname !== '/');
   }
