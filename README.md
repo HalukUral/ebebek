@@ -338,3 +338,16 @@ ve Allure raporunu yine artifact olarak yükler.
 - Ürün adedi artırma ve ürün silme
 - Türkçe para formatını parse ederek sayısal ara toplam kontrolü
 - Misafir sepetinin login sonrasında korunması
+
+## AI Kullanımı ve Doğrulama
+
+Bu projede AI destekli geliştirme aracı olarak **OpenAI Codex** kullanılmıştır.
+Codex'ten code review süreçlerinde destek alınmıştır.
+
+Codex desteği ağırlıklı olarak aşağıdaki alanlarda kullanılmıştır:
+
+- Framework yapısının ve kod tekrarlarının gözden geçirilmesi
+- Locator ve bekleme stratejileri için alternatiflerin değerlendirilmesi
+- CI/CD ve Allure entegrasyonunun kontrol edilmesi
+- Teknik dokümantasyonun düzenlenmesi
+
