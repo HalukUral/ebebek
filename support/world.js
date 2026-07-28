@@ -22,7 +22,7 @@ class EbebekWorld extends World {
     this.context = await this.browser.newContext({
       baseURL: config.baseUrl,
       locale: config.locale,
-      viewport: null,
+      viewport: config.headless ? { width: 1920, height: 1080 } : null,
       recordVideo: config.video ? { dir: 'test-results/videos' } : undefined,
     });
 
