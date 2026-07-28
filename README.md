@@ -1,152 +1,340 @@
-# e-bebek Web Test Automation
+# e-bebek Web Test Otomasyonu
 
-JavaScript, Playwright, Cucumber ve Allure kullanan e-bebek E2E test
-framework'ü. Mevcut kapsam login, ürün arama ve sepet case'leridir.
+e-bebek web uygulamasındaki login, logout, ürün arama, sepet ve oturum
+devamlılığı akışlarını test eden JavaScript tabanlı E2E otomasyon projesidir.
 
-## Kurulum
+## Kullanılan teknolojiler
 
-```bash
-npm install
-npx playwright install chromium
-cp .env.example .env
-```
-
-`.env` içinde test ortamına ait kullanıcı bilgilerini tanımlayın. Credential,
-base URL ve browser ayarları kaynak kodda tutulmaz.
-
-## Çalıştırma
-
-```bash
-npm test
-npm run test:login
-npm run test:negative-login
-npm run test:search
-npm run test:cart
-npm run test:logout
-npm run test:smoke
-```
-
-Varsayılan Cucumber koşumu iki paralel worker kullanır. UI modu için:
-
-```env
-HEADLESS=false
-```
-
-## Rapor
-
-```bash
-npm run report:generate
-npm run report:open
-```
-
-Allure raporu adımları, tag'ları, environment bilgisini ve başarısızlık
-artifact'lerini içerir. Başarısız senaryoda screenshot, trace ve video eklenir.
-Trace ayrıca şu komutla açılabilir:
-
-```bash
-npx playwright show-trace "$(ls -t test-results/traces/*.zip | head -1)"
-```
-
-## GitHub Actions
-
-`.github/workflows/smoke-tests.yml`; `main`/`master` branch push'larında, pull
-request'lerde ve manuel tetiklemede `npm run test:smoke` komutunu headless
-Chromium ile çalıştırır. Allure sonuçları, HTML raporu ve test artifact'leri
-koşum başarılı veya başarısız olsa da 14 gün süreyle yüklenir.
-
-Repository ayarlarında aşağıdaki Actions secret'ları tanımlanmalıdır:
-
-- `BASE_URL`
-- `TEST_USER_EMAIL`
-- `TEST_USER_PASSWORD`
+- Node.js 20+
+- Playwright
+- Cucumber / Gherkin
+- Allure Report
+- GitHub Actions
 
 ## Proje yapısı
 
 ```text
 config/             Ortam konfigürasyonu
-features/           İş dilindeki Gherkin case'leri
-fixtures/           Dinamik ve merkezi test verileri
-pages/              Locator ve sayfa davranışları
-step_definitions/   Generic ve domain step'leri
-support/            World, browser yaşam döngüsü ve hooks
+features/           Gherkin senaryoları
+fixtures/           Merkezi ve dinamik test verileri
+pages/              Page Object sınıfları ve locator'lar
+step_definitions/   Generic ve senaryoya özel Cucumber step'leri
+support/            World, hooks ve yardımcı metotlar
+cucumber.js         Cucumber, reporter ve paralel koşum ayarları
 ```
 
-## Framework nasıl çalışır?
+## Ön gereksinimler
 
-Bir senaryo çalışırken sırasıyla şu akış izlenir:
+- Node.js 20 veya üzeri
+- npm
+- Allure raporunu görüntülemek için Java
 
-1. `Before` hook yeni bir `World`, browser context ve page hazırlar.
-2. Step definition, yapılacak işi ilgili Page Object metoduna gönderir.
-3. Page Object locator ve sayfa davranışını yönetir.
-4. `After` hook ekran görüntüsü, trace ve video gibi artifact'leri toplar;
-   ardından browser'ı kapatır.
+Sürüm kontrolü:
 
-`BasePage`, tüm sayfalarda kullanılan `element(name)` ve ana sayfa açma
-davranışını içerir. `PageManager`, step'lerin `this.pages.login`,
-`this.pages.search` ve `this.pages.cart` üzerinden Page Object'lere ulaşmasını
-sağlar.
+```bash
+node --version
+npm --version
+java --version
+```
 
-`generic.steps.js`; tıklama, hover, input doldurma, element görünürlüğü ve URL
-kontrollerini tekrar kullanılabilir şekilde sağlar. Locator'lar Page Object
-içindeki `elements` map'lerinde tek yerde tanımlanır. XPath kullanılmaz; stabil
-ID, role ve anlamlı CSS locator'ları tercih edilir.
+## Kurulum
 
-Senaryoya özel geçici veriler yalnızca `this.scenarioState` içinde tutulur:
+Bağımlılıkları yükleyin:
+
+```bash
+npm install
+```
+
+Chromium tarayıcısını yükleyin:
+
+```bash
+npx playwright install chromium
+```
+
+Linux veya CI ortamında tarayıcıyla birlikte sistem bağımlılıklarını yüklemek
+için:
+
+```bash
+npx playwright install --with-deps chromium
+```
+
+Örnek ortam dosyasını kopyalayın:
+
+```bash
+cp .env.example .env
+```
+
+`.env` içindeki değerleri test ortamınıza göre düzenleyin:
+
+```env
+BASE_URL=https://www.e-bebek.com
+TEST_USER_EMAIL=test-kullanicisi@example.com
+TEST_USER_PASSWORD=test-sifresi
+BROWSER=chromium
+HEADLESS=true
+TRACE=true
+VIDEO=false
+LOCALE=tr-TR
+TIMEOUT_MS=30000
+```
+
+Base URL ve kullanıcı bilgileri kaynak kodda tutulmaz. Lokal çalışmada `.env`,
+CI çalışmasında environment variable veya repository secret kullanılır.
+
+## Testleri çalıştırma
+
+Tüm testler:
+
+```bash
+npm test
+```
+
+Smoke testleri:
+
+```bash
+npm run test:smoke
+```
+
+Pozitif login:
+
+```bash
+npm run test:login
+```
+
+Negatif login:
+
+```bash
+npm run test:negative-login
+```
+
+Arama testleri:
+
+```bash
+npm run test:search
+```
+
+Sepet ve oturum devamlılığı testleri:
+
+```bash
+npm run test:cart
+```
+
+Logout testi:
+
+```bash
+npm run test:logout
+```
+
+İstenilen Cucumber tag'i doğrudan çalıştırılabilir:
+
+```bash
+npx cucumber-js --tags "@state"
+npx cucumber-js --tags "@negative"
+npx cucumber-js --tags "@regression"
+```
+
+Testi tarayıcı arayüzü açık şekilde çalıştırmak için `.env` içindeki değer:
+
+```env
+HEADLESS=false
+```
+
+Headless çalıştırmak için:
+
+```env
+HEADLESS=true
+```
+
+## Paralel koşum
+
+Varsayılan worker sayısı `cucumber.js` içinde tanımlıdır:
+
+```js
+parallel: 2
+```
+
+Bu nedenle `npm test` ve tag tabanlı komutlar varsayılan olarak iki worker ile
+çalışır.
+
+Worker sayısını yalnızca ilgili koşum için değiştirmek mümkündür:
+
+```bash
+npx cucumber-js --parallel 4
+```
+
+Senaryolar paralel çalışmaya uygun tasarlanmıştır. Her senaryo:
+
+- Yeni bir Cucumber World nesnesi kullanır.
+- Yeni browser context ve page ile başlar.
+- Kendi `scenarioState` nesnesine sahiptir.
+- Başka bir senaryonun login, cookie, storage veya sepet verisini kullanmaz.
+
+## Test izolasyonu
+
+`Before` hook'u her senaryodan önce:
+
+1. Boş bir `scenarioState` oluşturur.
+2. Yeni browser context oluşturur.
+3. Yeni page açar.
+4. Page Object'leri `PageManager` üzerinden hazırlar.
+
+`After` hook'u senaryo tamamlandığında context ve browser'ı kapatır. Böylece
+cookie, `localStorage`, `sessionStorage` ve kullanıcı oturumu senaryolar
+arasında paylaşılmaz.
+
+Senaryo adımları arasında taşınması gereken veriler global değişkende değil,
+yalnızca o senaryoya ait World bağlamında saklanır:
 
 ```js
 this.scenarioState.searchTerm = term;
 this.scenarioState.cartProducts = products;
+this.scenarioState.guestCart = { product, quantity: 1 };
 ```
 
-Bu yaklaşım verinin hangi senaryoya ait olduğunu açık tutar ve paralel koşumda
-global state oluşmasını engeller.
+Dinamik test verilerinde timestamp ve process ID kullanılması, iki worker'ın
+aynı veriyi üretmesini önler. Artifact dosya isimlerinde de senaryo adı,
+process ID ve timestamp bulunduğu için paralel çalışan testler birbirinin
+çıktısının üzerine yazmaz.
 
-## Paralel koşum ve izolasyon
+## Bekleme stratejisi ve flaky test çözümleri
 
-Her scenario `Before` hook'unda yeni browser, context ve page oluşturur. Cookie,
-localStorage, sessionStorage ve World state'i senaryolar arasında paylaşılmaz.
-`After` hook'u context ve browser'ı kapatır. Artifact isimleri scenario adı,
-process ID ve timestamp içerdiği için iki worker aynı dosyaya yazmaz.
+Projede `sleep` ve `waitForTimeout` kullanılmaz. UI senkronizasyonu için
+Playwright'ın auto-wait özelliği ve koşul bazlı beklemeler kullanılır:
 
-`@state` senaryosunda misafirken sepete eklenen ürün ve adet bilgisi
-`this.scenarioState.guestCart` alanına yazılır. Bu alan Cucumber World nesnesine
-aittir; giriş adımından sonra aynı senaryo bağlamından okunarak ürünün sepette
-korunduğu doğrulanır. `Before` hook'u bu alanı her senaryo için boş başlatır.
+- `expect(locator).toBeVisible()`
+- `expect(locator).toBeHidden()`
+- `expect(locator).toHaveText()`
+- `expect(locator).toHaveCount()`
+- `locator.waitFor()`
+- `page.waitForURL()`
+- `page.goto(..., { waitUntil: 'networkidle' })`
 
-`@logout` senaryosu çıkış bağlantısına tıklamakla yetinmez. Giriş yapılmışken
-korumalı hesap sayfasının adresini World bağlamında saklar; çıkıştan sonra bu
-adresi yeniden açıp login sayfasına yönlendirmeyi ve misafir giriş menüsünü
-doğrular.
+### Ana sayfanın hazırlanması
 
-Kayıtlı olmayan e-posta her scenario için timestamp ve process ID ile dinamik
-üretilir. Hatalı şifre testi için kilitlenme politikası olmayan, yalnızca
-otomasyona ayrılmış bir test hesabı kullanılmalıdır.
+Ana sayfada `load` veya `domcontentloaded` tamamlandığında Angular
+bileşenlerinin event binding işlemleri henüz bitmemiş olabiliyor. Bu durumda
+arama alanı görünmesine rağmen Enter tuşu aramayı tetiklemeyebiliyor.
 
-e-bebek'in semantik arama servisi anlamsız/rastgele terimlerde dahi yüzlerce
-öneri döndürdüğü için doğal bir boş sonuç üretmiyor. Sonuçsuz arama case'i,
-yalnızca dinamik `sonucsuzArama` fixture teriminde ürün arama response'unu sıfır
-ürünle route ederek gerçek boş-state UI mesajını deterministik doğrular.
-Sonuçlu arama canlı backend'e karşı çalışır ve ilk ürünlerin tamamının arama
-terimindeki en az bir kelimeyle ilişkili olduğunu kontrol eder.
+Sabit süre beklemek yerine ana sayfa `networkidle` durumuna kadar açılır.
+Aramada öneri bileşeninin DOM'a eklendiği beklenir ve ardından Enter
+aksiyonu uygulanır. Sonuç sayfasına geçiş `waitForURL` ile doğrulanır.
 
-Sepet ara toplamı metin olarak karşılaştırılmaz. Her görünür sepet satırının
-`.product-price` birim fiyatı ve `.quantity-text` adedi okunur. Türkçe fiyat
-metnindeki `TL`, binlik noktası ve ondalık virgül temizlenerek sayı elde edilir.
-Beklenen `Σ(adet × birim fiyat)` iki ondalığa yuvarlanıp `#txtSubtotal`
-değeriyle sayısal olarak karşılaştırılır.
+### Hesabım menüsü
 
-## Bekleme ve flaky çözümü
+Hesabım alt menüsü masaüstünde hover ile açılır. Locator'a doğrudan tıklamak
+yerine:
 
-Projede `sleep` ve `waitForTimeout` kullanılmaz. Playwright auto-wait,
-`expect(...).toBeVisible()`, `waitFor()` ve URL assertion'ları kullanılır.
+1. Hesabım menüsünün üzerine gelinir.
+2. Login bağlantısının görünür olması beklenir.
+3. Görünür bağlantı üzerinden işleme devam edilir.
 
-Ana sayfada AWS challenge sonrası header geç yüklenebiliyor. Bu durum sabit süre
-beklemek yerine `hesabım menüsü` elementinin görünürlüğünü web-first assertion
-ile bekleyerek stabilize edilir. Hesabım flyout'u click ile kararsız açıldığı
-için gerçek masaüstü davranışına uygun olarak `hover()` yapılır ve login linki
-görünür olduktan sonra tıklanır.
+Bu yaklaşım gerçek kullanıcı davranışını taklit eder ve gizli menü locator'ına
+tıklama kaynaklı timeout'ları önler.
 
-Sepete ürün eklendiğinde açılan yan modal sonraki login aksiyonlarını
-engelleyebildiği için `waitForTimeout` kullanılmaz; modalın erişilebilir kapatma
-butonu görünür olana kadar assertion ile beklenir, tıklanır ve modalın kapandığı
-doğrulanır.
+### Sepete ekleme modalı
+
+Ürün sepete eklendiğinde açılan modal sonraki işlemleri engelleyebilir. Modal
+için sabit bekleme kullanılmaz:
+
+1. Kapatma butonunun görünür olması beklenir.
+2. Butona tıklanır.
+3. Butonun gizlendiği doğrulanır.
+
+### Sonuçsuz arama
+
+Canlı arama servisi anlamsız terimler için de öneri döndürebildiğinden boş
+sonuç senaryosu deterministik değildir. Yalnızca dinamik sonuçsuz arama test
+verisi için arama response'u Playwright route ile sıfır ürün döndürecek şekilde
+düzenlenir. Pozitif arama testi canlı backend üzerinden çalışmaya devam eder.
+
+## Allure raporu
+
+Test çalıştırıldığında Allure sonuçları `allure-results/` altında oluşturulur.
+
+HTML raporu üretmek için:
+
+```bash
+npm run report:generate
+```
+
+Raporu açmak için:
+
+```bash
+npm run report:open
+```
+
+Tek komut zinciriyle test ve rapor üretmek için:
+
+```bash
+npm test
+npm run report:generate
+npm run report:open
+```
+
+Allure raporu aşağıdaki bilgileri içerir:
+
+- Feature, scenario ve step sonuçları
+- Cucumber tag'leri
+- Base URL, browser, headless ve locale bilgileri
+- Hata durumunda full-page screenshot
+- Hata durumunda Playwright trace
+- `VIDEO=true` ise hata videosu
+
+## Trace kullanımı
+
+Trace kaydı `.env` içinde yönetilir:
+
+```env
+TRACE=true
+```
+
+En son oluşturulan trace'i açmak için:
+
+```bash
+npx playwright show-trace "$(ls -t test-results/traces/*.zip | head -1)"
+```
+
+Belirli bir trace dosyası:
+
+```bash
+npx playwright show-trace test-results/traces/trace-dosyasi.zip
+```
+
+## GitHub Actions
+
+Workflow dosyası:
+
+```text
+.github/workflows/smoke-tests.yml
+```
+
+Pipeline:
+
+- Smoke testlerini headless Chromium ile çalıştırır.
+- Her gün Türkiye saatiyle 08:00'de zamanlanır.
+- `main` ve `master` push'larında çalışır.
+- Pull request ve manuel tetiklemeyi destekler.
+- Allure sonuçlarını, HTML raporunu ve test artifact'lerini yükler.
+
+Repository içinde aşağıdaki Actions secret'ları tanımlanmalıdır:
+
+- `BASE_URL`
+- `TEST_USER_EMAIL`
+- `TEST_USER_PASSWORD`
+
+GitHub-hosted runner IP'leri e-bebek CloudFront tarafından `Request blocked`
+cevabıyla engellenebilir. Bu durum framework veya locator hatası değildir.
+Gerçek CI UI koşumu için izinli bir test ortamı, allowlist edilmiş runner veya
+self-hosted runner kullanılmalıdır. Pipeline hata durumunda screenshot, trace
+ve Allure raporunu yine artifact olarak yükler.
+
+## Test kapsamı
+
+- Geçerli kullanıcıyla login
+- Farklı negatif login kombinasyonları
+- Logout sonrasında korumalı sayfaya erişimin engellenmesi
+- Sonuçlu ve sonuçsuz ürün arama
+- İki ürünle sepet iş akışı
+- Ürün adedi artırma ve ürün silme
+- Türkçe para formatını parse ederek sayısal ara toplam kontrolü
+- Misafir sepetinin login sonrasında korunması
