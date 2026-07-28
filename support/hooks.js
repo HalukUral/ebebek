@@ -27,6 +27,11 @@ After(async function ({ result, pickle }) {
   const safeName = pickle.name.replace(/[^\p{L}\p{N}]+/gu, '-').toLowerCase();
   const artifactId = `${safeName}-${process.pid}-${Date.now()}`;
 
+  if (failed) {
+    console.error(`\nBaşarısız senaryo: ${pickle.name}`);
+    console.error(result.message || 'Cucumber hata ayrıntısı üretmedi.');
+  }
+
   if (failed && this.page && !this.page.isClosed()) {
     try {
       const screenshot = await this.page.screenshot({

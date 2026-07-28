@@ -55,6 +55,18 @@ jobs:
       - name: Chromium ve sistem bağımlılıklarını yükle
         run: npx playwright install --with-deps chromium
 
+      - name: Test konfigürasyonunu doğrula
+        shell: bash
+        run: |
+          missing=()
+          [[ -z "$BASE_URL" ]] && missing+=("BASE_URL")
+          [[ -z "$TEST_USER_EMAIL" ]] && missing+=("TEST_USER_EMAIL")
+          [[ -z "$TEST_USER_PASSWORD" ]] && missing+=("TEST_USER_PASSWORD")
+          if (( ${#missing[@]} > 0 )); then
+            echo "::error::Eksik GitHub Actions secret: ${missing[*]}"
+            exit 1
+          fi
+
       - name: Smoke testlerini çalıştır
         run: npm run test:smoke
 
